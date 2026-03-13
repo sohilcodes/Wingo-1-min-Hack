@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WinGo Predictor</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+
+body{
+background:#0b1220;
+font-family:Arial;
+color:white;
+text-align:center;
+margin:0;
+}
+
+.header{
+background:#111827;
+padding:15px;
+font-size:22px;
+font-weight:bold;
+}
+
+.card{
+background:#1f2937;
+margin:15px;
+padding:20px;
+border-radius:12px;
+box-shadow:0 0 10px black;
+}
+
+.result{
+font-size:50px;
+margin:10px;
+}
+
+.timer{
+font-size:28px;
+color:yellow;
+}
+
+.win{
+color:#00ff95;
+font-size:28px;
+}
+
+.loss{
+color:#ff4d4d;
+font-size:28px;
+}
+
+.big{color:#22c55e}
+.small{color:#ef4444}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">🎯 WinGo Predictor</div>
+
+<div class="card">
+<div>Next Prediction</div>
+<div id="prediction" class="result">BIG</div>
+
+<div>Current Result</div>
+<div id="result" class="result">--</div>
+
+<div id="status"></div>
+
+<div>Time Left</div>
+<div id="timer" class="timer">60</div>
+</div>
+
+<script>
+
+let timeLeft = 60
+let prediction = randomPred()
+
+function randomPred(){
+return Math.random() > 0.5 ? "BIG" : "SMALL"
+}
+
+function startTimer(){
+setInterval(()=>{
+timeLeft--
+
+if(timeLeft<=0){
+timeLeft=60
+checkResult()
+prediction = randomPred()
+document.getElementById("prediction").innerText = prediction
+}
+
+document.getElementById("timer").innerText = timeLeft
+
+},1000)
+}
+
+function checkResult(){
+
+fetch("https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json?ts="+Date.now())
+.then(res=>res.json())
+.then(data=>{
+
+let latest = data.data.list[0]
+let num = parseInt(latest.number)
+
+let actual = num >=5 ? "BIG" : "SMALL"
+
+document.getElementById("result").innerHTML =
+`<span class="${actual=='BIG'?'big':'small'}">${actual}</span>`
+
+if(actual == prediction){
+
+document.getElementById("status").innerHTML =
+`<div class="win">✅ WIN</div>`
+
+}else{
+
+document.getElementById("status").innerHTML =
+`<div class="loss">❌ LOSS</div>`
+
+}
+
+})
+}
+
+document.getElementById("prediction").innerText = prediction
+
+startTimer()
+checkResult()
+
+</script>
+
+</body>
+</html>
