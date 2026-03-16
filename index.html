@@ -2,70 +2,75 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>WinGo Live Sync</title>
+<title>WinGo Live</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 
 body{
 background:#0b1220;
-font-family:Arial;
 color:white;
+font-family:Arial;
 text-align:center;
 margin:0;
+padding-top:30px;
 }
 
-.header{
-background:#111827;
-padding:14px;
-font-size:22px;
+.period{
+font-size:20px;
+margin-bottom:20px;
+}
+
+.pred{
+font-size:60px;
 font-weight:bold;
 }
 
-.card{
-background:#1f2937;
-margin:12px;
-padding:18px;
+.big{color:#22c55e}
+.small{color:#ef4444}
+
+.bluebox{
+background:linear-gradient(90deg,#0ea5e9,#2563eb);
+width:240px;
+margin:20px auto;
+padding:20px;
 border-radius:12px;
+box-shadow:0 0 20px #000;
 }
-
-.big{color:#22c55e;font-size:34px}
-.small{color:#ef4444;font-size:34px}
-
-.pred{font-size:40px;margin:8px}
 
 .timer{
-font-size:32px;
-color:yellow;
+font-size:48px;
+font-weight:bold;
 }
 
-.win{color:#00ff95;font-size:24px}
-.loss{color:#ff4d4d;font-size:24px}
+.status{
+font-size:26px;
+margin-top:10px;
+}
+
+.win{color:#00ff95}
+.loss{color:#ff4d4d}
+
+.history{
+margin-top:30px;
+height:150px;
+overflow:hidden;
+border-top:1px solid #222;
+padding-top:10px;
+}
 
 .row{
-display:flex;
-justify-content:space-between;
-padding:8px;
-border-bottom:1px solid #111;
+padding:6px;
 }
 
-.footer{
-position:fixed;
-bottom:0;
-width:100%;
-background:#020617;
-padding:10px;
-font-size:14px;
+.celebrate{
+animation:pop 0.5s 6;
 }
 
-.flash{
-animation:flash 0.5s 6;
-}
-
-@keyframes flash{
-0%{opacity:1}
-50%{opacity:0}
-100%{opacity:1}
+@keyframes pop{
+0%{transform:scale(1)}
+50%{transform:scale(1.2)}
+100%{transform:scale(1)}
 }
 
 </style>
@@ -73,37 +78,17 @@ animation:flash 0.5s 6;
 
 <body>
 
-<div class="header">🎯 WinGo Live</div>
+<div class="period" id="period">Loading...</div>
 
-<div class="card">
-
-<div>Current Period</div>
-<div id="period">Loading...</div>
-
-<div>Result</div>
-<div id="result">--</div>
-
-<div>Previous</div>
-<div id="previous">--</div>
-
-<div style="margin-top:10px">Prediction</div>
 <div id="prediction" class="pred">BIG</div>
 
-<div id="status"></div>
-
-<div style="margin-top:10px">Timer</div>
+<div class="bluebox">
 <div id="timer" class="timer">--</div>
-
 </div>
 
-<div class="card">
-<h3>History</h3>
-<div id="history"></div>
-</div>
+<div id="status" class="status"></div>
 
-<div class="footer">
-Last Result → <span id="footer">--</span>
-</div>
+<div class="history" id="historyBox"></div>
 
 <script>
 
@@ -122,7 +107,7 @@ function color(s){
 return s=="BIG"?"big":"small"
 }
 
-// DM style period
+// DM Period
 function dmPeriod(){
 
 let d = new Date()
@@ -137,9 +122,7 @@ let round=String(totalMin%1000).padStart(3,'0')
 return `${yyyy}${mm}${dd}10001${round}`
 }
 
-// REAL TIMER SYNC
-function realTimer(){
-
+// REAL TIMER
 setInterval(()=>{
 
 let sec = new Date().getSeconds()
@@ -147,22 +130,16 @@ let left = 60-sec
 
 document.getElementById("timer").innerText = left
 
-// new round detect
 if(sec==0){
-load()
+
 prediction = rand()
-document.getElementById("prediction").innerText=prediction
+document.getElementById("prediction").innerText = prediction
+
+load()
+
 }
 
 },1000)
-
-}
-
-function flashResult(){
-let el = document.getElementById("result")
-el.classList.add("flash")
-setTimeout(()=>el.classList.remove("flash"),3000)
-}
 
 function load(){
 
@@ -170,34 +147,29 @@ fetch("https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json?ts=
 .then(r=>r.json())
 .then(d=>{
 
-let list = d.data.list
+let cur = d.data.list[0]
+let prev = d.data.list[1]
 
-let cur=list[0]
-let prev=list[1]
-
-let curSize=size(parseInt(cur.number))
-let prevSize=size(parseInt(prev.number))
+let curSize = size(parseInt(cur.number))
+let prevSize = size(parseInt(prev.number))
 
 document.getElementById("period").innerText = dmPeriod()
 
-document.getElementById("result").innerHTML =
-`<span class="${color(curSize)}">${curSize}</span>`
-
-document.getElementById("previous").innerHTML =
-prev.issueNumber+" → <span class='"+color(prevSize)+"'>"+prevSize+"</span>"
-
-document.getElementById("footer").innerText =
-prev.issueNumber+" → "+prevSize
-
-// result change detect
+// WIN LOSS
 if(lastIssue != cur.issueNumber){
 
-flashResult()
+let status = document.getElementById("status")
 
 if(curSize == prediction){
-document.getElementById("status").innerHTML="<div class='win'>WIN</div>"
+
+status.innerHTML = "🎉 WIN"
+status.className="status win celebrate"
+
 }else{
-document.getElementById("status").innerHTML="<div class='loss'>LOSS</div>"
+
+status.innerHTML = "😢 LOSS"
+status.className="status loss"
+
 }
 
 addHistory(cur.issueNumber,curSize)
@@ -212,21 +184,22 @@ lastIssue = cur.issueNumber
 
 function addHistory(issue,res){
 
-let box=document.getElementById("history")
+let box = document.getElementById("historyBox")
 
-let div=document.createElement("div")
-div.className="row"
+let div = document.createElement("div")
+div.className="row "+color(res)
 
-div.innerHTML=
-`<div>${issue}</div><div class="${color(res)}">${res}</div>`
+div.innerHTML = issue+" → "+res
 
 box.prepend(div)
 
+// auto scroll feel
+box.scrollTop = 0
+
 }
 
-document.getElementById("prediction").innerText=prediction
+document.getElementById("prediction").innerText = prediction
 
-realTimer()
 load()
 
 </script>
